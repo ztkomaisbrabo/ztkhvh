@@ -1,8 +1,8 @@
 
 local meta = {
     version = 0.5,
-    name = "Ztk",
-    git_source = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/Armada.lua",
+    name = "Advanced-Ztk",
+    git_source = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/Advanced-Ztk.lua",
     git_version = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/version"
 }
 
