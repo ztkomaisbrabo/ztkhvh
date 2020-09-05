@@ -1,5 +1,5 @@
 local meta = {
-    version = 1.3,
+    version = 1.4,
     name = "Armada",
     git_source = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/Armada.lua",
     git_version = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/version"
