@@ -1,623 +1,1133 @@
-local WALK_SPEED = 100;
-local DRAW_MARKER_DISTANCE = 100;
-local WH_ACTION_COOLDOWN = 30;
-local GAME_COMMAND_COOLDOWN = 40;
-local Wall_SAVE_FILE_NAME = "WallHelper.dat";
-local WLB = gui.Tab(gui.Reference("VISUALS"), "Wall_helper_settings", "Wall Helper")
-local W_ButtonPosition = gui.Reference("VISUALS", "Wall Helper");
 
-local W_MULTIBOX = gui.Groupbox(W_ButtonPosition, "Wall Helper Visuals", 20, 20, 265, 400);
-local W_keybind = gui.Groupbox(W_ButtonPosition, "Wall Helper Keybind", 320, 20, 265, 400);
+local meta = {
+    version = 0.5,
+    name = "Ztk",
+    git_source = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/Armada.lua",
+    git_version = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/version"
+}
 
-local WH_ENABLED = gui.Checkbox( W_MULTIBOX, "WH_enabled", "Wall Helper Enabled", 1 );
-local W_RECT_SIZE = gui.Slider(W_MULTIBOX, "WH_W_RECT_SIZE", "Rect Size", 10, 0, 25);
-local WH_CHECKBOX_THROWRECT = gui.Checkbox( W_MULTIBOX, "WH_ch_throw", "Rectangle Enabled", 1 );
-local WH_CHECKBOX_HELPERLINE = gui.Checkbox( W_MULTIBOX, "WH_ch_throwline", "Helper Line Enabled", 1 );
-local WH_CHECKBOX_BOXSTAND = gui.Checkbox( W_MULTIBOX, "WH_ch_standbox", "Stand Box Enabled", 1 );
-local WH_CHECKBOX_OOD = gui.Checkbox( W_MULTIBOX, "WH_ch_standbox_ood", "Stand Box No Enabled", 1 );
-local WH_CHECKBOX_TEXT = gui.Checkbox( W_MULTIBOX, "WH_ch_text", "Text Enabled (Name)", 1 );
-local WH_VISUALS_DISTANCE_SL = gui.Slider(W_MULTIBOX, "WH_max_distance", "Max Distance", 1200, 0, 5000);
-local W_THROW_RADIUS = gui.Slider(W_MULTIBOX, "WH_box_radius", "Affect Autostrafe", 5, 0, 50);
 
-local WH_CHECKBOX_W_keybindS = gui.Checkbox( W_keybind, "WH_ch_W_keybinds", "Enable Keybinds", 0 );
-local WH_ADD = gui.Keybox(W_keybind, "WH_kb_add", "Add", 0);
-local WH_REMOVE = gui.Keybox(W_keybind, "WH_kb_rem", "Remove", 0);
-local WE = gui.Text(W_keybind, "Wall Helper By AnAnAn")
-local WE = gui.Text(W_keybind, "It's modified by TitanumIchigo's Grenade hlper. ")
-local WE = gui.Text(W_keybind, "It's compatible with ghlper.")
-local WE = gui.Text(W_keybind, "I hope he doesn't mind.")
-local WE = gui.Text(W_keybind, "You need to have knife / R8 / deagle / AWP / Auto / SSG in your hand to use this script properly")
-local AnQun = gui.Button(W_keybind, "Release address", function()
-    panorama.RunScript( [[
-        SteamOverlayAPI.OpenExternalBrowserURL("https://aimware.net/forum/thread-133749.html");
-    ]] )
+local function update()
+    if tonumber(http.Get(meta.git_version)) > meta.version then
+        print("[Advanced-Ztk-Logs] New version available, updating..")
+        local current_script = file.Open(GetScriptName(), "w")
+        current_script:Write(http.Get(meta.git_source))
+        current_script:Close()
+        LoadScript(GetScriptName())
+        print("[Advanced-Ztk-Logs] Successfully updated.")
+    end
+end
+
+update()
+
+
+
+
+-- principal
+
+local ref = gui.Reference("Misc");
+local tab = gui.Tab(ref,"Extra","Ztk")
+local group = gui.Groupbox(tab,"Miscellaneous",16,16,296,300)
+local group = gui.Groupbox(tab,"Anti-Aim",325,16,296,300)
+local GROUP = gui.Groupbox(gui.Reference("Misc", "Enhancement"), "Auto-Buy", 328, 310, 299, 400);
+
+
+
+
+
+local ref = gui.Reference("Ragebot");
+local tab = gui.Tab(ref,"Extra","Extra")
+local group = gui.Groupbox(tab,"Anti-Aim",16,16,296,300)
+local group = gui.Groupbox(tab,"Manual Anti-Aim",325,16,296,300)
+
+
+local tab = gui.Tab(gui.Reference("Settings"), string.lower(meta.name) .. ".tab", meta.name)
+local versiontext = gui.Text(tab, "Ztk v" .. meta.version)
+versiontext:SetPosY(500)
+versiontext:SetPosX(570)
+
+
+-- misc
+local gui_gref = gui.Reference("Ragebot", "Accuracy", "Weapon")
+local gui_dtap = gui.Checkbox(gui_gref, "lua.dtap", "DoubleTap Fix", 0)
+gui_dtap:SetDescription("Increases double tap accuracy and consistency");
+local gui_gref = gui.Reference("Ragebot", "Ztk", "Anti-Aim")
+local gui_shotswitch = gui.Checkbox(gui_gref, "lua.shotswitch", "SwitchDesync", 0)
+gui_shotswitch:SetDescription("Change the side of desync after shooting");
+local cache = {shot, dtap}
+
+local function switch(var)
+    if var == 1 then
+        return 2
+    else
+        return 1
+    end
+end
+
+
+
+callbacks.Register("Draw", function()
+    if cache.shot then
+        gui.SetValue("rbot.antiaim.fakeyawstyle", switch(gui.GetValue("rbot.antiaim.fakeyawstyle")))
+        cache.shot = false
+    end
 end)
 
-local W_CLR_THROW = gui.ColorPicker(WH_CHECKBOX_THROWRECT, "WH_W_CLR_THROW", "Wall Helper Throw Point", 255, 0, 0, 255);
-local W_CLR_HELPER_LINE = gui.ColorPicker(WH_CHECKBOX_HELPERLINE, "WH_CLR_helper", "Wall Helper Line Color", 233, 212, 96, 255);
-local W_CLR_STAND_BOX = gui.ColorPicker(WH_CHECKBOX_BOXSTAND, "WH_CLR_standbox", "Wall Helper Location", 0, 230, 64, 255);
-local W_CLR_STAND_BOX_OOD = gui.ColorPicker(WH_CHECKBOX_OOD, "WH_CLR_standbox_oop", "Wall Helper Location (Out)", 255, 0, 0, 255);
-local W_CLR_TEXT = gui.ColorPicker(WH_CHECKBOX_TEXT, "WH_CLR_text", "Wall Helper Text Color", 255, 255, 255, 255);
+callbacks.Register("CreateMove", function(cmd)
+    if cache.dtap then
+        cmd.sidemove = 0
+        cmd.forwardmove = 0
+        cache.dtap = false
+    end
+end)
 
-local maps = {}
 
-local WH_WINDOW_ACTIVE = false;
 
-local window_show = false;
-local window_cb_pressed = true;
-local should_load_data = true;
-local last_action = globals.TickCount();
-local throw_to_add;
-local chat_add_step = 1;
-local message_to_say;
-local my_last_message = globals.TickCount();
-local screen_w, screen_h = 0,0;
-local should_load_data = true;
 
-local nade_type_mapping = {
-    "knife",
-}
+callbacks.Register("FireGameEvent", function(event)
+if not entities.GetLocalPlayer() then return end
+    if ( event:GetName() == 'weapon_fire' ) then
 
-local throw_type_mapping = {
-    "oneway",
-    "fakeduck",
-    "espbug",
-    " ",
-}
+        local lp = client.GetLocalPlayerIndex()
+        local int_shooter = event:GetInt('userid')
+        local index_shooter = client.GetPlayerIndexByUserID(int_shooter)
 
-local chat_add_messages = {
-    "[HVH] Welcome to wall helper, please enter the name of the point you added, or enter the space to skip, for example: fakeduck here",
-    "[HVH] Please enter the description: oneway/fakeduck/ESPBug/,or enter the space to skip",
-}
-
--- Just open up the file in append mode, should create the file if it doesn't exist and won't override anything if it does
-local my_file = file.Open(Wall_SAVE_FILE_NAME, "a");
-my_file:Close();
-
-local current_map_name;
-
-function gameEventHandlerw(event)
-	if (WH_ENABLED:GetValue() == false) then
-		return
-	end
-
-	local event_name = event:GetName();
-	
-    if (event_name == "player_say" and throw_to_add ~= nil) then
-        local self_pid = client.GetLocalPlayerIndex();
-        print(self_pid);
-        local chat_uid = event:GetInt('userid');
-        local chat_pid = client.GetPlayerIndexByUserID(chat_uid);
-        print(chat_pid);
-
-        if (self_pid ~= chat_pid) then
-            return;
-        end
-
-        my_last_message = globals.TickCount();
-
-        local say_text = event:GetString('text');
-
-        if (say_text == "cancel") then
-            message_to_say = "[HVH] Throw cancelled";
-            throw_to_add = nil;
-            chat_add_step = 0;
-            return;
-        end
-
-        -- Don't use the bot's messages
-        if (string.sub(say_text, 1, 5) == "[HVH]") then
-            return;
-        end
-
-        -- Enter name
-        if (chat_add_step == 1) then
-            throw_to_add.name = say_text;
-        elseif (chat_add_step == 2) then
-            if (hasValuew(throw_type_mapping, say_text) == false) then
-                message_to_say = "[HVH] You entered '" .. say_text .. "' Incorrect, please enter: oneway/fakeduck/ESPBug/space";
-                return;
+        if ( index_shooter == lp) then
+            if gui_shotswitch:GetValue() then
+                cache.shot = true
             end
-
-            throw_to_add.type = say_text;
-            message_to_say = "[HVH] Your order '" .. throw_to_add.name .. "' - " .. throw_to_add.type .. " Successfully added.";
-            table.insert(maps[current_map_name], throw_to_add);
-            throw_to_add = nil;
-            local value = convertTableToDataStringw(maps);
-            local data_file = file.Open(Wall_SAVE_FILE_NAME, "w");
-            if (data_file ~= nil) then
-                data_file:Write(value);
-                data_file:Close();
+            if gui_dtap:GetValue() then
+                cache.dtap = true
             end
+        end
+    end
+end)
 
-            chat_add_step = 0;
-            return;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Manual AA & Indicators BY FROG
+local get_local = entities.GetLocalPlayer
+local gui_set = gui.SetValue
+local gui_get = gui.GetValue
+local left_key = 0
+local back_key = 0
+local right_key = 0
+local up_key = 0
+local rage_ref = gui.Reference("Ragebot", "Extra", "Manual Anti-Aim")
+local check_indicator = gui.Checkbox(rage_ref, "manual", "Activate", false)
+local manual_left = gui.Keybox(rage_ref, "manual_left", "Left", 0)
+local manual_right = gui.Keybox(rage_ref, "manual_right", "Right", 0)
+local manual_back = gui.Keybox(rage_ref, "manual_back", "Back", 0)
+local manual_up = gui.Keybox(rage_ref, "manual_up", "Front", 0)
+
+-- Fonts
+local text_font = draw.CreateFont("Verdana", 20, 700)
+local arrow_font = draw.CreateFont("Marlett", 35, 700)
+
+local function main()
+  if manual_left:GetValue() ~= 0 then
+    if input.IsButtonPressed(manual_left:GetValue()) then
+      left_key = left_key + 1
+      back_key = 0
+      right_key = 0
+      up_key = 0
+    end
+  end
+
+  if manual_back:GetValue() ~= 0 then
+    if input.IsButtonPressed(manual_back:GetValue()) then
+      back_key = back_key + 1
+      left_key = 0
+      right_key = 0
+      up_key = 0
+    end
+  end
+
+  if manual_right:GetValue() ~= 0 then
+    if input.IsButtonPressed(manual_right:GetValue()) then
+      right_key = right_key + 1
+      left_key = 0
+      back_key = 0
+      up_key = 0
+    end
+  end
+
+  if manual_up:GetValue() ~= 0 then
+    if input.IsButtonPressed(manual_up:GetValue()) then
+      up_key = up_key + 1
+      left_key = 0
+      back_key = 0
+      right_key = 0
+    end
+  end
+end
+
+function CountCheck()
+  if (left_key == 1) then
+    back_key = 0
+    right_key = 0
+    up_key = 0
+  elseif (back_key == 1) then
+    left_key = 0
+    right_key = 0
+    up_key = 0
+  elseif (right_key == 1)  then
+    left_key = 0
+    back_key = 0
+    up_key = 0
+  elseif (up_key == 1) then
+    left_key = 0
+    back_key = 0
+    right_key = 0
+  elseif (left_key == 2) then
+    left_key = 0
+    back_key = 0
+    right_key = 0
+    up_key = 0
+  elseif (back_key == 2) then
+    left_key = 0
+    back_key = 0
+    right_key = 0
+    up_key = 0
+  elseif (right_key == 2) then
+    left_key = 0
+    back_key = 0
+    right_key = 0
+    up_key = 0
+  elseif (up_key == 2) then
+    left_key = 0
+    back_key = 0
+    right_key = 0
+    up_key = 0
+  end
+end
+
+function SetLeft()
+  gui_set("rbot.antiaim.yaw", 90)
+end
+
+function SetBack()
+  gui_set("rbot.antiaim.yaw", 180)
+end
+
+function SetRight()
+  gui_set("rbot.antiaim.yaw", -90)
+end
+
+function SetUp()
+  gui_set("rbot.antiaim.yaw", 0)
+end
+
+function SetAuto()
+  gui_set("rbot.antiaim.yaw", 180)
+end
+
+function draw_indicator()
+  local active = check_indicator:GetValue()
+  if active then
+    local w, h = draw.GetScreenSize()
+    if (left_key == 1) then
+      SetLeft()
+      draw.Color(85, 127, 177, 255)
+      draw.SetFont(arrow_font)
+      draw.TextShadow( w/2 - 60, h/2 - 16, "3")
+    elseif (back_key == 1) then
+      SetBack()
+      draw.Color(85, 127, 177, 255)
+      draw.SetFont(arrow_font)
+      draw.TextShadow( w/2 - 17, h/2 + 33, "6")
+    elseif (right_key == 1) then
+      SetRight()
+      draw.Color(85, 127, 177, 255)
+      draw.SetFont(arrow_font)
+      draw.TextShadow( w/2 + 30, h/2 - 16, "4")
+    elseif (up_key == 1) then
+      SetUp()
+      draw.Color(85, 127, 177, 255)
+      draw.SetFont(arrow_font)
+      draw.TextShadow( w/2 - 17, h/2 + -66, "5")
+    elseif ((left_key == 0) and (back_key == 0) and (right_key == 0) and (up_key == 0)) then
+      SetAuto()
+      draw.Color(85, 127, 177, 255)
+      draw.SetFont(text_font)
+      draw.TextShadow(15, h - 560, "freestand")
+    end
+  end
+end
+
+callbacks.Register("Draw", "main", main)
+callbacks.Register("Draw", "CountCheck", CountCheck)
+callbacks.Register("Draw", "draw_indicator", draw_indicator)
+
+
+
+
+
+
+
+
+
+
+
+
+-- tipo 1 
+
+local YawJitter = 1
+local aaRef = gui.Reference("Ragebot", "Extra", "Anti-Aim")
+local aaIndicator = gui.Checkbox(aaRef, YawJitter, "Normal Freestand", false)
+
+aaIndicator:SetDescription("No use with manual anti-aim and inverter");
+function YawSwitch()
+  local JitterActive = aaIndicator:GetValue()
+  if JitterActive then
+    if (YawJitter == 1) then
+      gui.SetValue("rbot.antiaim.pitchstyle", 1)
+      gui.SetValue("rbot.antiaim.yawstyle", 1)
+      gui.SetValue("rbot.antiaim.yaw", -160)
+      gui.SetValue("rbot.antiaim.lbyextend", true)
+      gui.SetValue("rbot.antiaim.desync", 44)
+      YawJitter = 2
+    elseif (YawJitter == 2) then
+      gui.SetValue("rbot.antiaim.fakeyawstyle", 1)
+      gui.SetValue("rbot.antiaim.lbyextend", false)
+      gui.SetValue("rbot.antiaim.desync", 58)
+      YawJitter = 1
+    end
+  end
+end
+
+callbacks.Register("Draw", YawSwitch)
+
+
+
+
+
+
+
+-- tipo test
+
+local YawJitter = 1
+local aaRef = gui.Reference("Ragebot", "Extra", "Anti-Aim")
+local aaIndicator = gui.Checkbox(aaRef, YawJitter, "Minimum Freestand Jittery", false)
+
+
+
+
+aaIndicator:SetDescription("No use with manual anti-aim");
+
+
+function YawSwitch()
+  local JitterActive = aaIndicator:GetValue()
+  if JitterActive then
+    if (YawJitter == 1) then
+      gui.SetValue("rbot.antiaim.fakeyawstyle", 1)
+      gui.SetValue("rbot.antiaim.yaw", -160)
+      gui.SetValue("misc.fakelag.factor", 10)
+      gui.SetValue("misc.fakelag.type", 0)
+      gui.SetValue("rbot.antiaim.pitchstyle", 1)
+      gui.SetValue("rbot.antiaim.lbyextend", false)
+
+      gui.SetValue("rbot.antiaim.desync", 44)
+
+      YawJitter = 2
+    elseif (YawJitter == 2) then
+      gui.SetValue("rbot.antiaim.fakeyawstyle", 2)
+      gui.SetValue("rbot.antiaim.yaw", 172)
+      gui.SetValue("misc.fakelag.factor", 12)
+      gui.SetValue("misc.fakelag.type", 0)
+      gui.SetValue("rbot.antiaim.desync", 58)
+      YawJitter = 1
+    end
+  end
+end
+
+callbacks.Register("Draw", YawSwitch)
+
+
+
+
+
+
+
+
+
+-- tipo 2
+
+local YawJitter = 1
+local aaRef = gui.Reference("Ragebot", "Extra", "Anti-Aim")
+local aaIndicator = gui.Checkbox(aaRef, YawJitter, "Maximum Freestand Jittery", false)
+
+
+
+
+aaIndicator:SetDescription("No use with manual anti-aim and inverter");
+
+
+function YawSwitch()
+  local JitterActive = aaIndicator:GetValue()
+  if JitterActive then
+    if (YawJitter == 1) then
+      gui.SetValue("rbot.antiaim.fakeyawstyle", 1)
+      gui.SetValue("rbot.antiaim.yaw", -167)
+      gui.SetValue("misc.fakelag.factor", 10)
+      gui.SetValue("misc.fakelag.type", 0)
+      gui.SetValue("rbot.antiaim.pitchstyle", 1)
+      gui.SetValue("rbot.antiaim.lbyextend", true)
+      gui.SetValue("rbot.antiaim.desync", 54)
+      YawJitter = 2
+    elseif (YawJitter == 2) then
+      gui.SetValue("rbot.antiaim.fakeyawstyle", 2)
+      gui.SetValue("rbot.antiaim.yaw", 177)
+      gui.SetValue("misc.fakelag.factor", 12)
+      gui.SetValue("misc.fakelag.type", 0)
+      gui.SetValue("rbot.antiaim.desync", 58)
+      YawJitter = 1
+    end
+  end
+end
+
+callbacks.Register("Draw", YawSwitch)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- tipo 3
+local YawJitter = 1
+local aaRef = gui.Reference("Ragebot", "Extra", "Anti-Aim")
+local aaIndicator = gui.Checkbox(aaRef, YawJitter, "Legit Anti-Aim Breaker", false)
+
+
+aaIndicator:SetDescription("No use with manual anti-aim and inverter");
+
+
+function YawSwitch()
+  local JitterActive = aaIndicator:GetValue()
+  if JitterActive then
+    if (YawJitter == 1) then
+
+
+      gui.SetValue("rbot.antiaim.fakeyawstyle", 1)
+
+      gui.SetValue("rbot.antiaim.yawstyle", 1)
+
+
+      gui.SetValue("rbot.antiaim.pitchstyle", 0)
+      gui.SetValue("rbot.antiaim.yaw", 0)
+
+
+      YawJitter = 2
+
+
+
+    elseif (YawJitter == 2) then
+
+      
+     gui.SetValue("rbot.antiaim.fakeyawstyle", 2)
+
+
+
+
+      YawJitter = 1 
+
+
+    end
+  end
+end
+
+callbacks.Register("Draw", YawSwitch)
+
+
+
+
+
+
+
+
+-- quick
+
+
+
+local uid_to_idx = client.GetPlayerIndexByUserID;
+local get_local_player = client.GetLocalPlayerIndex;
+local in_action;
+local equipped;
+local ref = gui.Reference("Misc", "General","Extra")
+local quickswitch = gui.Checkbox(ref, 'lua_quick_switch', 'QuickSwitch Scout', 0);
+quickswitch:SetDescription("Pull the knife after shot with scout");
+local function on_weapon_fire( _event )
+    if quickswitch:GetValue() then
+    if ( _event:GetName( ) ~= 'weapon_fire' ) then
+        return;
+    end
+
+    if (gui.GetValue("misc.fakelatency.enable")) then
+        return;
+    end
+
+    local _local = get_local_player( );
+    local _id = _event:GetInt('userid');
+
+    if ( _local == uid_to_idx( _id ) ) then
+        local _weapon = _event:GetString( 'weapon' );
+
+        if ( _weapon == 'weapon_ssg08' ) then
+            client.Command( 'slot3', true )
+            flip = true;
+        end
+    end
+end
+end
+client.AllowListener( 'weapon_fire' );
+callbacks.Register( 'FireGameEvent', 'on_weapon_fire', on_weapon_fire );
+local function on_item_equip( _event )
+    if ( _event:GetName( ) ~= 'item_equip' ) then
+        return;
+    end
+
+    local _local = get_local_player( );
+    local _id = _event:GetInt( 'userid' );
+    local _item =  _event:GetString( 'item' );
+
+    if ( _local == uid_to_idx( _id ) ) then
+        equipped = _item;
+    end
+end
+
+client.AllowListener( 'item_equip' );
+callbacks.Register( 'FireGameEvent', 'on_item_equip', on_item_equip );
+function reset_tick( _cmd )
+  if ( flip ) then
+        if ( equipped ~= 'ssg08' ) then
+            client.Command( "slot1", true )
+            flip = false;
+        end
+    end
+end
+
+callbacks.Register( 'CreateMove', 'reset_tick', reset_tick );
+
+
+
+
+
+
+local uid_to_idx = client.GetPlayerIndexByUserID;
+local get_local_player = client.GetLocalPlayerIndex;
+local in_action;
+local equipped;
+local ref = gui.Reference("Misc", "General","Extra")
+
+local quickswitch = gui.Checkbox(ref, 'lua_quick_switch', 'QuickSwitch Awp', 0);
+quickswitch:SetDescription("Pull the knife after shot with awp");
+
+local function on_weapon_fire( _event )
+    if quickswitch:GetValue() then
+    if ( _event:GetName( ) ~= 'weapon_fire' ) then
+        return;
+    end
+
+    if (gui.GetValue("misc.fakelatency.enable")) then
+        return;
+    end
+
+    local _local = get_local_player( );
+    local _id = _event:GetInt('userid');
+
+    if ( _local == uid_to_idx( _id ) ) then
+        local _weapon = _event:GetString( 'weapon' );
+
+        if ( _weapon == 'weapon_awp' ) then
+            client.Command( 'slot3', true )
+            flip = true;
+        end
+    end
+end
+end
+client.AllowListener( 'weapon_fire' );
+callbacks.Register( 'FireGameEvent', 'on_weapon_fire', on_weapon_fire );
+local function on_item_equip( _event )
+    if ( _event:GetName( ) ~= 'item_equip' ) then
+        return;
+    end
+
+    local _local = get_local_player( );
+    local _id = _event:GetInt( 'userid' );
+    local _item =  _event:GetString( 'item' );
+
+    if ( _local == uid_to_idx( _id ) ) then
+        equipped = _item;
+    end
+end
+
+client.AllowListener( 'item_equip' );
+callbacks.Register( 'FireGameEvent', 'on_item_equip', on_item_equip );
+function reset_tick( _cmd )
+  if ( flip ) then
+        if ( equipped ~= 'awp' ) then
+            client.Command( "slot1", true )
+            flip = false;
+        end
+    end
+end
+callbacks.Register( 'CreateMove', 'reset_tick', reset_tick );
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- autobuy
+
+
+
+
+local primaryWeapons = {
+    { "None", nil, nil };
+    { "AutoSniper", "scar20" };
+    { "Scout", "ssg08" };
+    { "AWP", "awp" };
+    { "AUG | SG553", "aug" };
+    { "AK-47 | M4A1", "ak47" };
+};
+local secondaryWeapons = {
+    { "None", nil, nil };
+    { "Dual Elites", "elite" };
+    { "Desert Eagle | R8 Revolver", "deagle" };
+    { "Five Seven | Tec 9", "tec9" };
+    { "P250", "p250" };
+};
+local armors = {
+    { "None", nil, nil };
+    { "Kevlar Vest", "vest", nil };
+    { "Kevlar Vest + Helmet", "vest", "vesthelm" };
+};
+local granades = {
+    { "Off", nil, nil };
+    { "Grenade", "hegrenade", nil };
+    { "Flashbang", "flashbang", nil };
+    { "Smoke Grenade", "smokegrenade", nil };
+    { "Decoy Grenade", "decoy", nil };
+    { "Molotov | Incindiary Grenade", "molotov", "incgrenade" };
+};
+
+
+
+local ENABLED = gui.Checkbox(GROUP, "autobuy.active", "Enable", false);
+local PRIMARY_WEAPON = gui.Combobox(GROUP, "autobuy.primary", "Weapon 1", primaryWeapons[1][1], primaryWeapons[2][1], primaryWeapons[3][1], primaryWeapons[4][1], primaryWeapons[5][1], primaryWeapons[6][1]);
+local SECONDARY_WEAPON = gui.Combobox(GROUP, "autobuy.secondary", "Weapon 2", secondaryWeapons[1][1], secondaryWeapons[2][1], secondaryWeapons[3][1], secondaryWeapons[4][1]);
+local ARMOR = gui.Combobox(GROUP, "autobuy.armor", "Armor", armors[1][1], armors[2][1], armors[3][1]);
+local GRENADE_SLOT1 = gui.Combobox(GROUP, "autobuy.grenade1", "Grenade 1", granades[1][1], granades[2][1], granades[3][1], granades[4][1], granades[5][1], granades[6][1]);
+local GRENADE_SLOT2 = gui.Combobox(GROUP, "autobuy.grenade2", "Grenade 2", granades[1][1], granades[2][1], granades[3][1], granades[4][1], granades[5][1], granades[6][1]);
+local GRENADE_SLOT3 = gui.Combobox(GROUP, "autobuy.grenade3", "Grenade 3", granades[1][1], granades[2][1], granades[3][1], granades[4][1], granades[5][1], granades[6][1]);
+local GRENADE_SLOT4 = gui.Combobox(GROUP, "autobuy.grenade4", "Grenade 4", granades[1][1], granades[2][1], granades[3][1], granades[4][1], granades[5][1], granades[6][1]);
+local TASER = gui.Checkbox(GROUP, "autobuy.taser", "Buy Zeus", true);
+local DEFUSER = gui.Checkbox(GROUP, "autobuy.defuser", "Buy Defuse Kit", true);
+gui.Text(GROUP, "");
+
+local function buy(wat)
+    if (wat == nil) then return end;
+    if (printLogs) then
+        print('Bought x1 ' .. wat);
+    end;
+    client.Command('buy "' .. wat .. '";', true);
+end
+
+
+local function buyTable(table)
+    for i, j in pairs(table) do
+        buy(j);
+    end;
+end
+
+local function buyWeapon(selection, table)
+    local selection = selection:GetValue();
+    local weaponToBuy = table[selection + 1][2];
+    buy(weaponToBuy);
+end
+
+local function buyGrenades(selections)
+    for k, selection in pairs(selections) do
+        local selection = selection:GetValue();
+        local grenadeTable = granades[selection + 1];
+        buyTable({ grenadeTable[2], grenadeTable[3] });
+    end
+end
+
+callbacks.Register('FireGameEvent', function(e)
+    if (ENABLED:GetValue() ~= true) then return end;
+    local localPlayer = entities.GetLocalPlayer();
+    local en = e:GetName();
+    if (localPlayer == nil or en ~= "player_spawn") then return end;
+    local userIndex = client.GetPlayerIndexByUserID(e:GetInt('userid'));
+    local localPlayerIndex = localPlayer:GetIndex();
+    if (userIndex ~= localPlayerIndex) then return end;
+    buyWeapon(PRIMARY_WEAPON, primaryWeapons);
+    buyWeapon(SECONDARY_WEAPON, secondaryWeapons);
+    local armorSelected = ARMOR:GetValue();
+    local armorTable = armors[armorSelected + 1];
+    buyTable({ armorTable[2], armorTable[3] });
+    if (DEFUSER:GetValue()) then
+        buy('defuser');
+    end
+    if (TASER:GetValue()) then
+        buy('taser');
+    end
+    buyGrenades({ GRENADE_SLOT1, GRENADE_SLOT2, GRENADE_SLOT3, GRENADE_SLOT4 });
+end);
+
+client.AllowListener("player_spawn");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+local TAB= gui.Reference("Misc", "Ztk")
+local GROUPBOX_MAIN=gui.Groupbox(TAB, "Semirage", 16,400,296,300)
+local KEYBOX_QUICKSWITCH=gui.Keybox (GROUPBOX_MAIN, "rlswitch", "Quickswitch", 0)
+KEYBOX_QUICKSWITCH:SetDescription("Switches between legitbot and ragebot")
+local KEYBOX_INVERTER=gui.Keybox(GROUPBOX_MAIN, "inverter", "Inverter", 0)
+KEYBOX_INVERTER:SetDescription("This only works for ragebot")
+local KEYBOX_AWSWITCH=gui.Keybox(GROUPBOX_MAIN, "awswitch", "AutoWall", 0)
+KEYBOX_AWSWITCH:SetDescription("Turn autwall on and off")
+local MULTIBOX_INDICATORS=gui.Multibox(GROUPBOX_MAIN, "Indicators")
+local CHECKBOX_QUICKSWITCH = gui.Checkbox(MULTIBOX_INDICATORS, "switch", "Quickswitch", 0)
+local CHECKBOX_AUTOWALLSWITCH = gui.Checkbox(MULTIBOX_INDICATORS, "autowswitch", "Autowall switch", 0)
+local CHECKBOX_INVERTER = gui.Checkbox(MULTIBOX_INDICATORS, "dsncinverter", "Desync inverter", 0)
+local rcol=gui.ColorPicker(CHECKBOX_QUICKSWITCH, "rcol_color", "Rage Indicator", 255, 25, 25, 255)
+local lcol=gui.ColorPicker(CHECKBOX_QUICKSWITCH, "lcol_color", "Legit Indicator", 124, 176, 34, 255)
+local aoff=gui.ColorPicker(CHECKBOX_AUTOWALLSWITCH, "aoff_color", "AW off Indicator", 255, 25, 25, 255)
+local aon=gui.ColorPicker(CHECKBOX_AUTOWALLSWITCH, "aon_color", "AW on Indicator", 124, 176, 34, 255)
+local aacol=gui.ColorPicker(CHECKBOX_INVERTER, "aacol_color", "Desync side Indicator", 28, 108, 204, 255)
+local Font = draw.CreateFont("Verdana", 34, 700)
+local screenW, screenH = draw.GetScreenSize()
+function Indicators()
+    draw.SetFont(Font)
+    if CHECKBOX_QUICKSWITCH:GetValue() then
+        if gui.GetValue("rbot.master") then
+            draw.Color(rcol:GetValue())
+            draw.TextShadow(10, screenH - 500, "Rage")
         else
-            chat_add_step = 0;
-            return;
+            draw.Color(lcol:GetValue())
+            draw.TextShadow(10, screenH - 500, "Legit")
         end
-
-        chat_add_step = chat_add_step + 1;
-        message_to_say = chat_add_messages[chat_add_step];
-
-        return;
     end
-end
-
-function doAddw(cmd)
-	local me = entities.GetLocalPlayer();
-    if (current_map_name == nil or maps[current_map_name] == nil or me == nil or not me:IsAlive()) then
-        return;
+    if CHECKBOX_AUTOWALLSWITCH:GetValue() then
+        if awtggl then
+            draw.Color(aon:GetValue())
+            draw.TextShadow(10, screenH - 465, "AW")
+        else
+            draw.Color(aoff:GetValue())
+            draw.TextShadow(10, screenH - 465, "AW")
+        end
     end
-	
-	local myPos = me:GetAbsOrigin();
-	local angles = cmd:GetViewAngles();
-	local nade_type = getWeaponNamew(me);
-    if (nade_type ~= nil and nade_type ~= "knife") then
-        return;
-    end
-	
-	local new_throw = {
-        name = "",
-        type = "not_set",
-        nade = nade_type,
-        pos = {
-            x = myPos.x,
-            y = myPos.y,
-            z = myPos.z
-        },
-        ax = angles.x,
-        ay = angles.y
-    };
-	
-	throw_to_add = new_throw;
-    chat_add_step = 1;
-    message_to_say = chat_add_messages[chat_add_step];
-end
-
-function removeFirstThroww(throw)
-    for i, v in ipairs(maps[current_map_name]) do
-        if (v.name == throw.name and v.pos.x == throw.pos.x and v.pos.y == throw.pos.y and v.pos.z == throw.pos.z) then
-            return table.remove(maps[current_map_name], i);
+    if CHECKBOX_INVERTER:GetValue() then
+        if invrtr then
+            draw.Color(aacol:GetValue())
+            draw.TextShadow(10, screenH - 430, "Left")
+        else
+            draw.Color(aacol:GetValue())
+            draw.TextShadow(10, screenH - 430, "Right")
         end
     end
 end
-
-function doDel(throw)
-	if (current_map_name == nil or maps[current_map_name] == nil) then
-        return;
+callbacks.Register("Draw", "semiragehelper", Indicators)
+function qswitch()
+    if KEYBOX_QUICKSWITCH:GetValue() ~= 0 then
+        if input.IsButtonPressed(KEYBOX_QUICKSWITCH:GetValue()) then
+            rltggl = not rltggl
+        end
+        if rltggl then
+            gui.SetValue("rbot.master", false)
+            gui.SetValue("lbot.master", true)
+        else
+            gui.SetValue("rbot.master", true)
+            gui.SetValue("lbot.master", false)
+        end
     end
+end    
+callbacks.Register("Draw", "semiragehelper", qswitch)
+function awswitch()
+    if KEYBOX_AWSWITCH:GetValue() ~= 0 then
+        if input.IsButtonPressed(KEYBOX_AWSWITCH:GetValue()) then
+            awtggl = not awtggl
+        end
+        if awtggl then   
+            gui.SetValue( "rbot.hitscan.mode.asniper.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.hpistol.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.lmg.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.pistol.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.shotgun.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.smg.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.scout.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.sniper.autowall", 1)
+            gui.SetValue( "rbot.hitscan.mode.rifle.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.asniper.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.hpistol.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.lmg.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.pistol.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.shotgun.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.smg.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.scout.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.sniper.autowall", 1)
+            gui.SetValue( "lbot.weapon.vis.rifle.autowall", 1)
+        else
+            gui.SetValue( "rbot.hitscan.mode.asniper.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.hpistol.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.lmg.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.pistol.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.shotgun.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.smg.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.scout.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.sniper.autowall", 0)
+            gui.SetValue( "rbot.hitscan.mode.rifle.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.asniper.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.hpistol.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.lmg.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.pistol.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.shotgun.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.smg.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.scout.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.sniper.autowall", 0)
+            gui.SetValue( "lbot.weapon.vis.rifle.autowall", 0)
+        end
+    end
+end
+callbacks.Register("Draw", "semiragehelper", awswitch)
+function finverter()
+    gui.SetValue("rbot.antiaim.base", [[0, "Desync"]])
+    if KEYBOX_INVERTER:GetValue() ~= 0 then
+        if input.IsButtonPressed(KEYBOX_INVERTER:GetValue()) then
+            invrtr = not invrtr
+        end
+        if invrtr then   
+            gui.SetValue("rbot.antiaim.fakeyawstyle", 1)
+        else
+            gui.SetValue("rbot.antiaim.fakeyawstyle", 2)
+        end
+    end
+end
+callbacks.Register("Draw", "semiragehelper", finverter)
 
-    removeFirstThroww(throw);
 
-    local value = convertTableToDataStringw(maps);
-    local data_file = file.Open(Wall_SAVE_FILE_NAME, "w");
-    if (data_file ~= nil) then
-        data_file:Write(value);
-        data_file:Close();
+
+
+
+
+
+local mouseX, mouseY, x, y, dx, dy, w, h = 0, 0, 25, 660, 0, 0, 300, 60;
+local shouldDrag = false;
+local font = draw.CreateFont("Ubuntu", 15, 15);
+local topbarSize = 20;
+local svgData = http.Get( "https://media.discordapp.net/attachments/750844957442703421/751306841677496412/actually_looks_kinda_cool.png" );
+local imgRGBA, imgWidth, imgHeight = common.DecodePNG( svgData );
+local texture = draw.CreateTexture( imgRGBA, imgWidth, imgHeight );
+local render = {};
+
+render.outline = function( x, y, w, h, col )
+    draw.Color( col[1], col[2], col[3], col[4] );
+    draw.OutlinedRect( x, y, x + w, y + h );
+end
+render.rect = function( x, y, w, h, col )
+    draw.Color( col[1], col[2], col[3], col[4] );
+    --draw.FilledRect( x, y, x + w, y + h );
+end
+render.rect2 = function( x, y, w, h )
+    draw.FilledRect( x, y, x + w, y + h );
+end
+render.gradient = function( x, y, w, h, col1, col2, is_vertical )
+    render.rect( x, y, w, h, col1 );
+    local r, g, b = col2[1], col2[2], col2[3];
+    if is_vertical then
+        for i = 1, h do
+            local a = i / h * 255;
+            render.rect( x, y + i, w, 1, { r, g, b, a } );
+        end
+    else
+        for i = 1, w do
+            local a = i / w * 255;
+            render.rect( x + i, y, 1, h, { r, g, b, a } );
+        end
     end
 end
 
-function moveEventHandlerw(cmd)
-
-	if (WH_ENABLED:GetValue() == false) then
-		return
-	end
-
-	local me = entities.GetLocalPlayer();
-	
-
-    if (current_map_name == nil or maps == nil or maps[current_map_name] == nil or me == nil or not me:IsAlive()) then
-        throw_to_add = nil;
-        chat_add_step = 1;
-        message_to_say = nil;
-        return;
-    end
-	
-	if (throw_to_add ~= nil) then
-        return;
-    end
-	
-	local add_W_keybind = WH_ADD:GetValue();
-    local del_W_keybind = WH_REMOVE:GetValue();
-	
-	if (WH_CHECKBOX_W_keybindS:GetValue() == false or (add_W_keybind == 0 and del_W_keybind == 0)) then
-        return;
-    end
-	
-	if (last_action ~= nil and last_action > globals.TickCount()) then
-        last_action = globals.TickCount();
-    end
-
-    if (add_W_keybind ~= 0 and input.IsButtonDown(add_W_keybind) and globals.TickCount() - last_action > WH_ACTION_COOLDOWN) then
-        last_action = globals.TickCount();
-        return doAddw(cmd);
-    end
-
-    local closest_throw, distance = getClosestThroww(maps[current_map_name], me, cmd);
-    if (closest_throw == nil or distance > W_THROW_RADIUS:GetValue()) then
-        return;
-    end
-
-    if (del_W_keybind ~= 0 and input.IsButtonDown(del_W_keybind) and globals.TickCount() - last_action > WH_ACTION_COOLDOWN) then
-        last_action = globals.TickCount();
-        return doDel(closest_throw);
-    end
-end
-
-function drawEventHandlerw()
-	if (WH_ENABLED:GetValue() == false) then
-		return
-	end
-
-    if (should_load_data) then
-        loadDataw();
-        should_load_data = false;
-    end
-
-    screen_w, screen_h = draw.GetScreenSize();
-
-    local active_map_name = engine.GetMapName();
-
-    -- If we don't have an active map, stop
-    if (active_map_name == nil or maps == nil) then
-        return;
-    end
-
-    if (maps[active_map_name] == nil) then
-        maps[active_map_name] = {};
-    end
-
-    if (current_map_name ~= active_map_name) then
-        current_map_name = active_map_name;
-    end
-
-    if (maps[current_map_name] == nil) then
-        return;
-    end
-
-    if (my_last_message ~= nil and my_last_message > globals.TickCount()) then
-        my_last_message = globals.TickCount();
-    end
-
-    if (message_to_say ~= nil and globals.TickCount() - my_last_message > 100) then
-        client.ChatTeamSay(message_to_say);
-        message_to_say = nil;
-    end
-
-    showNadeThrowsw();
-end
-
-
-function loadDataw()
-    local data_file = file.Open(Wall_SAVE_FILE_NAME, "r");
-    if (data_file == nil) then
-        return;
-    end
-    local throw_data = data_file:Read();
-    data_file:Close();
-    if (throw_data ~= nil and throw_data ~= "") then
-       maps = parseStringifiedTablew(throw_data);
-    end
-end
-
-function showNadeThrowsw()
-    local me = entities:GetLocalPlayer();
-	if (me == nil) then
-        return;
-    end
-
-	local myPos = me:GetAbsOrigin();
-    local weapon_name = getWeaponNamew(me);
-
-    if (weapon_name ~= nil and weapon_name ~= "knife" ) then
-        return;
-    end
-
-
-    local throws_to_show, within_distance = getActiveThrowsw(maps[current_map_name], me, weapon_name);
-	
-    for i=1, #throws_to_show do
-        local throw = throws_to_show[i];
-				
-		local throwVector = Vector3(throw.pos.x, throw.pos.y, throw.pos.z);
-        local cx, cy = client.WorldToScreen(throwVector);
-
-        if (within_distance) then
-            local z_offset = 64;
-            if (throw.type == "crouch") then
-                z_offset = 46;
-            end
-
-            local t_x, t_y, t_z = getThrowPositionw(throw.pos.x, throw.pos.y, throw.pos.z, throw.ax, throw.ay, z_offset);
-			local drawVector = Vector3(t_x, t_y, t_z);
-            local draw_x, draw_y = client.WorldToScreen(drawVector);
-            if (draw_x ~= nil and draw_y ~= nil) then
-				-- Draw rectangle for throw point
-				if WH_CHECKBOX_THROWRECT:GetValue() then
-					draw.Color(W_CLR_THROW:GetValue());
-					local rSize = W_RECT_SIZE:GetValue();
-					draw.RoundedRect(draw_x - rSize, draw_y - rSize, draw_x + rSize, draw_y + rSize);
-				end
-				
-                -- Draw a line from the center of our screen to the throw position
-				if WH_CHECKBOX_HELPERLINE:GetValue() then
-					draw.Color(W_CLR_HELPER_LINE:GetValue());
-					draw.Line(draw_x, draw_y, screen_w / 2, screen_h / 2);				
-				end
-				              
-				-- Draw throw type
-				if WH_CHECKBOX_TEXT:GetValue() then
-					draw.Color(W_CLR_TEXT:GetValue());
-					local text_size_w, text_size_h = draw.GetTextSize(throw.name);
-					draw.Text(draw_x - text_size_w / 2, draw_y - 30 - text_size_h / 2, throw.name);
-					text_size_w, text_size_h = draw.GetTextSize(throw.type);
-					draw.Text(draw_x - text_size_w / 2, draw_y - 20 - text_size_h / 2, throw.type);
-				end
+local function getspectators()
+    local spectators = {};
+    local lp = entities.GetLocalPlayer();
+    if lp ~= nil then
+      local players = entities.FindByClass("CCSPlayer");    
+        for i = 1, #players do
+            local players = players[i];
+            if players ~= lp and players:GetHealth() <= 0 then
+                local name = players:GetName();
+                if players:GetPropEntity("m_hObserverTarget") ~= nil then
+                    local playerindex = players:GetIndex();
+                    if name ~= "GOTV" and playerindex ~= 1 then
+                        local target = players:GetPropEntity("m_hObserverTarget");
+                        if target:IsPlayer() then
+                            local targetindex = target:GetIndex();
+                            local myindex = client.GetLocalPlayerIndex();
+                            if lp:IsAlive() then
+                                if targetindex == myindex then
+                                    
+                                    table.insert(spectators, players)
+                                end
+                            end
+                        end
+                    end
+                end
             end
         end
-		
-    	local ulVector = Vector3(throw.pos.x - W_THROW_RADIUS:GetValue() / 2, throw.pos.y - W_THROW_RADIUS:GetValue() / 2, throw.pos.z);
-        local ulx, uly = client.WorldToScreen(ulVector);
-		local blVector = Vector3(throw.pos.x - W_THROW_RADIUS:GetValue() / 2, throw.pos.y + W_THROW_RADIUS:GetValue() / 2, throw.pos.z);
-        local blx, bly = client.WorldToScreen(blVector);
-		local urVector = Vector3(throw.pos.x + W_THROW_RADIUS:GetValue() / 2, throw.pos.y - W_THROW_RADIUS:GetValue() / 2, throw.pos.z);
-        local urx, ury = client.WorldToScreen(urVector);
-		local brVector = Vector3(throw.pos.x + W_THROW_RADIUS:GetValue() / 2, throw.pos.y + W_THROW_RADIUS:GetValue() / 2, throw.pos.z);
-        local brx, bry = client.WorldToScreen(brVector);
-	
+    end 
+    return spectators;
+end
 
-		if (cx ~= nil and cy ~= nil and ulx ~= nil and uly ~= nil and blx ~= nil and bly ~= nil and urx ~= nil and ury ~= nil and brx ~= nil and bry ~= nil) then
-
-			if(throw.distance < WH_VISUALS_DISTANCE_SL:GetValue()) then
-
-
-				-- Draw name
-				if (throw.name ~= nil) then
-					if WH_CHECKBOX_TEXT:GetValue() then
-						local text_size_w, text_size_h = draw.GetTextSize(throw.name);
-						draw.Color(W_CLR_TEXT:GetValue());
-						draw.Text(cx - text_size_w / 2, cy - 20 - text_size_h / 2, throw.name);
-					end
-				end
-
-				-- Show radius as green when in distance, blue otherwise
-				if (within_distance) then
-					if WH_CHECKBOX_BOXSTAND:GetValue() then
-						draw.Color(W_CLR_STAND_BOX:GetValue());
-					else
-						draw.Color(255, 255, 255, 0);
-					end
-				else
-					if WH_CHECKBOX_OOD:GetValue() then
-						draw.Color(W_CLR_STAND_BOX_OOD:GetValue());
-					end
-				end
-				
-				
-		
-				-- Top left to rest
-				draw.Line(ulx, uly, blx, bly);
-		
-				draw.Line(ulx, uly, urx, ury);
-				draw.Line(ulx, uly, brx, bry);
-
-				-- Bottom right to rest
-				draw.Line(brx, bry, blx, bly);
-				draw.Line(brx, bry, urx, ury);
-
-				-- Diagonal
-				draw.Line(blx, bly, urx, ury);
-			end
-		end
+local function drawspectators(spectators)
+    local temp = false;
+    for index, players in pairs(spectators) do
+        
+        if (temp) then
+            render.gradient( x+9, (y + topbarSize + 5) + (index * 15), 198, 1, { 13, 14, 15, 255 }, {40, 30, 30, 255 }, false );
+            
+        end
+        temp=true;
+        draw.SetFont(font);
+        draw.Color(255, 255, 255, 255);
+        draw.Text(x + 15, (y + topbarSize + 9) + (index * 15), players:GetName())
+      
     end
 end
 
-
-function getThrowPositionw(pos_x, pos_y, pos_z, ax, ay, z_offset)
-    return pos_x - DRAW_MARKER_DISTANCE * math.cos(math.rad(ay + 180)), pos_y - DRAW_MARKER_DISTANCE * math.sin(math.rad(ay + 180)), pos_z - DRAW_MARKER_DISTANCE * math.tan(math.rad(ax)) + z_offset;
+local function drawRectFill(r, g, b, a, x, y, w, h, texture)
+    if (texture ~= nil) then
+        draw.SetTexture(texture);
+    else
+        draw.SetTexture(texture);
+    end
+    draw.Color(r, g, b, a);
+    draw.FilledRect(x, y, x + w, y + h);
 end
 
-function getWeaponNamew(me)
-    local my_weapon = me:GetPropEntity("m_hActiveWeapon");
-    if (my_weapon == nil) then
-        return nil;
+local function drawGradientRectFill(col1, col2, x, y, w, h)
+    drawRectFill(col1[1], col1[2], col1[3], col1[4], x, y, w, h);
+    local r, g, b = col2[1], col2[2], col2[3];
+    for i = 1, h do
+        local a = i / h * col2[4];
+        drawRectFill(r, g, b, a, x + 2, y + i, w - 2, 1);
     end
-
-    local weapon_name = my_weapon:GetClass();
-    weapon_name = weapon_name:gsub("CWeapon", "");
-    weapon_name = weapon_name:lower();
-
-    if (weapon_name:sub(1, 1) == "c") then
-        weapon_name = weapon_name:sub(2)
-    end
-
-    if (weapon_name == "scar20") then
-        weapon_name = "knife";
-    end
-
-    if (weapon_name == "awp") then
-        weapon_name = "knife";
-    end
-
-    if (weapon_name == "g3sg1") then
-        weapon_name = "knife";
-    end
-
-     if (weapon_name == "ssg08") then
-        weapon_name = "knife";
-     end     
-
-     if (weapon_name == "revolver") then
-        weapon_name = "knife";
-     end
-
-     if (weapon_name == "deagle") then
-        weapon_name = "knife";
-     end
-
-     if (weapon_name == "elite") then
-        weapon_name = "knife";
-     end
-     
-    return weapon_name;
 end
 
-function getDistanceToTargetw(my_x, my_y, my_z, t_x, t_y, t_z)
-    local dx = my_x - t_x;
-    local dy = my_y - t_y;
-    local dz = my_z - t_z;
-    return math.sqrt(dx*dx + dy*dy + dz*dz);
+local function dragFeature()
+    if input.IsButtonDown(1) then
+        mouseX, mouseY = input.GetMousePos();
+        if shouldDrag then
+            x = mouseX - dx;
+            y = mouseY - dy;
+        end
+        if mouseX >= x and mouseX <= x + w and mouseY >= y and mouseY <= y + 40 then
+            shouldDrag = true;
+            dx = mouseX - x;
+            dy = mouseY - y;
+        end
+    else
+        shouldDrag = false;
+    end
 end
 
-function dumpw(o)
-   if type(o) == 'table' then
-      local s = '{ '
-      for k,v in pairs(o) do
-         if type(k) ~= 'number' then k = '"'..k..'"' end
-         s = s .. '['..k..'] = ' .. dumpw(v) .. ','
-      end
-      return s .. '} '
-   else
-      return tostring(o)
-   end
+local function drawOutline(r, g, b, a, x, y, w, h, howMany)
+    for i = 1, howMany do
+        draw.Color(r, g, b, a);
+        draw.OutlinedRect(x - i, y - i, x + w + i, y + h + i);
+    end
 end
 
-function getActiveThrowsw(map, me, nade_name)
-    local throws = {};
-    local throws_in_distance = {};
-    -- Determine if any are within range, we should only show those if that's the case
-    for i=1, #map do
+local function drawWindow(Keybinds)
+    local tW, _ = draw.GetTextSize(keytext);
+    local h2 = 5 + (Keybinds * 15);
+    local h = h + (Keybinds * 15);
+    
+    drawRectFill(13, 14, 15, 250, x + 7, y + 20, 202, 20);
 
-        local throw = map[i];
-		
-        if (throw ~= nil and throw.nade == nade_name) then
-            local myPos = me:GetAbsOrigin();
+    draw.Color(255, 255, 255);
+    draw.SetFont(font);
+    local keytext = 'Spectators';
+    
+    draw.Text(x + ((55 - tW) / 2), y + 25, keytext)
+    
+    drawRectFill(25, 28, 31, 250, x + 7, y + 40, 200, h2);
+    drawOutline(25, 28, 31, 255, x + 9, y + 40, 198, h2, 2);
+    
+    draw.Color(255, 255, 255);
+    draw.SetTexture( texture );
+    draw.FilledRect( x+10, y+22, x+25, y+37 );
+    draw.SetTexture( texture );
+    
+end
 
-            local distance = getDistanceToTargetw(myPos.x, myPos.y, throw.pos.z, throw.pos.x, throw.pos.y, throw.pos.z);
-            throw.distance = distance;
-	
-            if (distance < W_THROW_RADIUS:GetValue()) then
-                table.insert(throws_in_distance, throw);
-            else
-                table.insert(throws, throw);
+callbacks.Register("Draw", function()
+    if speclist:GetValue() == false then return end
+    if not entities.GetLocalPlayer() or not entities.GetLocalPlayer():IsAlive() then return end
+
+    draw.SetTexture( texture );
+    local spectators = getspectators();
+    drawWindow(#spectators);
+
+    drawspectators(spectators);
+    dragFeature();
+end)
+------------------------------------------------------------
+--DrawUI
+------------------------------------------------------------
+function DrawUI()
+speclist = gui.Checkbox(gui.Reference("Misc","Ztk","Miscellaneous"),"speclist","Spectator List",0);
+speclist:SetDescription("Shows a list of players watching you"); 
+end
+DrawUI();
+
+
+
+
+
+
+
+
+local iLastTick = 0
+
+callbacks.Register( "Draw", function()
+    if globals.TickCount() > iLastTick then
+        local playerList = entities.FindByClass( "CCSPlayer" )
+        for i = 1, #playerList do
+            if playerList[i]:GetPropEntity("m_hObserverTarget"):GetIndex() == entities.GetLocalPlayer():GetIndex() then
+                gui.SetValue( "misc.Extra.speclistt", true )
+                return
             end
         end
+        gui.SetValue( "misc.Extra.speclist", false )
     end
+    iLastTick = globals.TickCount()
+end )
 
-    if (#throws_in_distance > 0) then
-        return throws_in_distance, true;
+
+
+
+
+
+
+
+-- fake duck animacao maluca
+
+
+
+local getLocal = function() return entities.GetLocalPlayer() end
+local ref = gui.Reference("Visuals", "Local", "Camera");
+local whyamiwastingmytime = gui.Checkbox( ref, fuckmyass, "Fakeduck Animation", false )
+whyamiwastingmytime:SetDescription("Show fakeduck animation in your hand");
+local viewmodelZ = (client.GetConVar("viewmodel_offset_z"));
+function yourmumsahoe()
+if whyamiwastingmytime:GetValue() then
+if getLocal() then
+if getLocal():IsAlive() then
+local shitthisisboring = gui.GetValue('rbot.antiaim.extra.fakecrouchkey')
+local andsofuckinguseless = input.IsButtonDown( shitthisisboring )                                            
+local yourmum = entities.GetLocalPlayer();
+local tbagmodeengaged = yourmum:GetProp('m_flDuckAmount')            
+if  andsofuckinguseless == true then
+client.SetConVar("viewmodel_offset_z", viewmodelZ - (tbagmodeengaged*8), true)
+else client.SetConVar("viewmodel_offset_z", viewmodelZ, true)
+end end end end end                        
+callbacks.Register("Draw", yourmumsahoe)
+
+
+
+
+
+
+
+
+
+-- tipo 4
+local YawJitter = 1
+local aaRef = gui.Reference("Misc", "Enhancement", "Fakelag")
+local aaIndicator = gui.Checkbox(aaRef, YawJitter, "Valve Matchmaking", false)
+
+aaIndicator:SetDescription("Fakelag in valve matchmaking");
+function YawSwitch()
+  local JitterActive = aaIndicator:GetValue()
+  if JitterActive then
+    if (YawJitter == 1) then
+      gui.SetValue("misc.fakelag.factor", 3)
+
+      gui.SetValue("misc.fakelag.type", 1)
+
+      YawJitter = 2
+    elseif (YawJitter == 2) then
+      gui.SetValue("misc.fakelag.factor", 5)
+
+      gui.SetValue("misc.fakelag.type", 1)
+
+
+      YawJitter = 1
     end
-
-    return throws, false;
+  end
 end
 
-function getClosestThrow(map, me, cmd)
-    local closest_throw;
-    local closest_distance;
-    local closest_distance_from_center;
-    local myPos = me:GetAbsOrigin();
-    for i = 1, #map do
-        local throw = map[i];
-        local distance = getDistanceToTargetw(myPos.x, myPos.y, throw.pos.z, throw.pos.x, throw.pos.y, throw.pos.z);
-        local z_offset = 64;
-        if (throw.type == "crouch") then
-            z_offset = 46;
-        end
-        local pos_x, pos_y, pos_z = getThrowPositionw(throw.pos.x, throw.pos.y, throw.pos.z, throw.ax, throw.ay, z_offset);
-		local drawVector = Vector3(pos_x, pos_y, pos_z);
-        local draw_x, draw_y = client.WorldToScreen(drawVector);
-        local distance_from_center;
-
-        if (draw_x ~= nil and draw_y ~= nil) then
-            distance_from_center = math.abs(screen_w / 2 - draw_x + screen_h / 2 - draw_y);
-        end
-
-        if (
-        closest_distance == nil
-                or (
-        distance <= W_THROW_RADIUS:GetValue()
-                and (
-        closest_distance_from_center == nil
-                or (closest_distance_from_center ~= nil and distance_from_center ~= nil and distance_from_center < closest_distance_from_center)
-        )
-        )
-                or (
-        (closest_distance_from_center == nil and distance < closest_distance)
-        )
-        ) then
-            closest_throw = throw;
-            closest_distance = distance;
-            closest_distance_from_center = distance_from_center;
-        end
-    end
-
-    return closest_throw, closest_distance;
-end
-
-function parseStringifiedTablew(stringified_table)
-    local new_map = {};
-
-    local strings_to_parse = {};
-    for i in string.gmatch(stringified_table, "([^\n]*)\n") do
-        table.insert(strings_to_parse, i);
-    end
-
-    for i=1, #strings_to_parse do
-        local matches = {};
-
-        for word in string.gmatch(strings_to_parse[i], "([^,]*)") do
-            table.insert(matches, word);
-        end
-
-        local map_name = matches[1];
-        if new_map[map_name] == nil then
-            new_map[map_name] = {};
-        end
-
-        table.insert(new_map[map_name], {
-            name = matches[3],
-            type = matches[5],
-            nade = matches[7],
-            pos = {
-                x = tonumber(matches[9]),
-                y = tonumber(matches[11]),
-                z = tonumber(matches[13])
-            },
-            ax = tonumber(matches[15]),
-            ay = tonumber(matches[17]);
-        });
-    end
-
-    return new_map;
-end
-
-function convertTableToDataStringw(object)
-    local converted = "";
-    for map_name, map in pairs(object) do
-        for i, throw in ipairs(map) do
-            if (throw ~= nil) then
-                converted = converted..map_name.. ','..throw.name..','..throw.type..','..throw.nade..','..throw.pos.x..','..throw.pos.y..','..throw.pos.z..','..throw.ax..','..throw.ay..'\n';
-            end
-        end
-    end
-
-    return converted;
-end
-
-function hasValuew(tab, val)
-    for index, value in ipairs(tab) do
-        if value == val then
-            return true
-        end
-    end
-
-    return false
-end
+callbacks.Register("Draw", YawSwitch)
 
 
 
-client.AllowListener("player_say");
-callbacks.Register("FireGameEvent", "WH_EVENT", gameEventHandlerw);
-callbacks.Register("CreateMove", "WH_MOVE", moveEventHandlerw);
-callbacks.Register("Draw", "WH_DRAW", drawEventHandlerw);
+
+
+
+
+
