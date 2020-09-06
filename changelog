@@ -1,0 +1,11 @@
+1.4
+
+Update 05/09/2020 
+
+- added spectator list
+- fixed the inverter for semirage
+- added fake duck animation
+- added minimum freestand jittery for antiaim
+- added maximum freestand jittery for antiaim
+- added pulsation colors for ghost, weapon, arms and skeleton
+- added recoil crosshair
