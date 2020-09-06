@@ -2,10 +2,19 @@
 
 Update 05/09/2020 
 
-- added spectator list
+- fixed spectator list
 - fixed the inverter for semirage
 - added fake duck animation
+- added fake-lag for matchmaking
 - added minimum freestand jittery for antiaim
 - added maximum freestand jittery for antiaim
 - added pulsation colors for ghost, weapon, arms and skeleton
 - added recoil crosshair
+- reworked aspect ratio
+- added zeus bot
+- added sync head movement
+- added door spam
+- added vanilla knifes
+- added speed counter
+- added rainbow hud and delay
+- added door spam for troll
