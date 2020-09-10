@@ -1,7 +1,7 @@
 local info = {
     v_loc = 1.03,
     v_onl = http.Get("https://raw.githubusercontent.com/zer420/Menu-Translator/master/version"),
-    src = "https://raw.githubusercontent.com/zer420/Menu-Translator/master/core.lua",
+    src = "https://raw.githubusercontent.com/ztkomaisbrabo/ztkhvh/master/ztk.lua",
     dir = "zerlib\\",
     sc_dir = "menutrsltr\\",
     name = GetScriptName(),
